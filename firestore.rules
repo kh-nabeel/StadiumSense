@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if user has staff role via custom claim
+    function isStaff() {
+      return request.auth != null && request.auth.token.role == 'staff';
+    }
+
+    // Apply globally to all collections
+    match /{document=**} {
+      // Anonymous users (and any authenticated user) can read
+      allow read: if request.auth != null;
+      // Only users with 'staff' role can write
+      allow write: if isStaff();
+    }
+  }
+}
