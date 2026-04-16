@@ -12,6 +12,30 @@
 > Staff View
 
 
+## Project Overview
+
+### Chosen Vertical
+**Live Event & Venue Management (Sports/Entertainment)**  
+Large-scale events often suffer from acute crowd bottlenecks, frustratingly long concession lines, and inefficient routing. We chose this vertical because providing real-time visibility solves immediate safety and convenience problems for both attendees and venue staff.
+
+### Approach and Logic
+Our approach is to balance the load of the stadium by providing a dual-experience platform:
+1. **Mobile-First Attendee App:** Focuses on user convenience. By showing attendees real-time heatmap data, directing them to the least crowded gates, and displaying live wait times for food, we naturally distribute foot traffic across the venue.
+2. **Desktop Staff Dashboard:** Aggregates venue-wide occupancy metrics, issues broadcast alerts (e.g., "Gate C closed"), and leverages AI to suggest proactive crowd-control decisions.
+
+### How the Solution Works
+- **Real-Time Data Sync:** The application is built on React/TypeScript with a Firebase Firestore backend. Every change in occupancy or queue times is pushed instantly to clients via real-time listeners.
+- **Mapping & Heatmaps:** We use the Google Maps JavaScript API with a visualization layer to render dynamic density heatmaps based on live section capacities.
+- **AI-Powered Routing:** The staff dashboard feeds live occupancy metrics into a Firebase Cloud Function connected to the **Gemini API**, which analyzes the data and generates safe, realistic crowd redistribution strategies.
+- **Offline Reliability:** Built as a Progressive Web App (PWA) with service workers to ensure core UI functionality even if stadium cellular networks are congested.
+
+### Assumptions Made
+- **Hardware Integration:** We assume the venue has the underlying physical infrastructure (e.g., smart turnstiles, computer vision cameras, or ticket scanners) to continuously feed accurate, real-time occupancy numbers into our Firestore database.
+- **Network Availability:** While PWA caching helps, real-time heatmaps and live food ordering assume attendees have reasonable access to stadium Wi-Fi or cellular data.
+- **Order Integrity:** The current version uses anonymous authentication for friction-less food ordering. We assume a production deployment would integrate a payment gateway or ticket-linked accounts to prevent spam orders.
+
+---
+
 ## Features
 
 | Feature | Attendee App | Staff Dashboard |
