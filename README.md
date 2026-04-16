@@ -4,9 +4,12 @@
 
 # ScreenShots 
 
-<img width="843" height="1600" alt="attendee view" src="https://github.com/user-attachments/assets/3ace212b-feec-499b-8d0d-a10ea4cc556a" />
+<img width="1919" height="943" alt="attendee view" src="https://github.com/user-attachments/assets/9b056173-54cc-4e9f-bd98-525bf55abc54" />
+> Attendee View
+
 
 <img width="1919" height="943" alt="staff view" src="https://github.com/user-attachments/assets/5f7cada7-0cd4-4d93-b6ed-91b6c709fac6" />
+> Staff View
 
 
 ## Features
