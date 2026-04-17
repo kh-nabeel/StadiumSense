@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { signInAnonymously } from 'firebase/auth'
 import { auth } from './firebase'
 import AttendeeView from './components/AttendeeView'
+import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 
 const StaffDashboard = lazy(() => import('./components/StaffDashboard'))
@@ -40,15 +41,24 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AttendeeView />} />
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <main id="main-content">
+        <Routes>
+        <Route path="/" element={
+          <ErrorBoundary>
+            <AttendeeView />
+          </ErrorBoundary>
+        } />
         <Route path="/staff" element={
-          <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>Loading Dashboard...</div>}>
-            <StaffDashboard />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>Loading Dashboard...</div>}>
+              <StaffDashboard />
+            </Suspense>
+          </ErrorBoundary>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </main>
     </BrowserRouter>
   )
 }

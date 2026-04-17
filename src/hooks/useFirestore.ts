@@ -10,9 +10,19 @@ import {
   type DocumentData,
 } from 'firebase/firestore'
 import { db } from '../firebase'
+import { traceFirestoreLoad } from '../performance/traces'
+import { COLLECTIONS } from '../constants'
 
 // ─── useFirestoreCollection ────────────────────────────────────────────────────
 
+/**
+ * Custom hook to fetch a Firestore collection and listen to real-time updates.
+ * @param collectionPath The path to the Firestore collection.
+ * @param constraints Optional Firestore query constraints (e.g., where, orderBy).
+ * @returns An object containing the data array, loading state, and any error encountered.
+ * @example
+ * const { data, loading, error } = useFirestoreCollection('sections', [where('status', '==', 'critical')]);
+ */
 export function useFirestoreCollection<T extends DocumentData>(
   collectionPath: string,
   constraints: QueryConstraint[] = []
@@ -26,6 +36,10 @@ export function useFirestoreCollection<T extends DocumentData>(
 
   useEffect(() => {
     isFirst.current = true
+    const stopTrace = (collectionPath === COLLECTIONS.SECTIONS || collectionPath === COLLECTIONS.CONCESSIONS)
+      ? traceFirestoreLoad(collectionPath)
+      : null
+
     const ref = collection(db, collectionPath)
     const q = constraints.length > 0 ? query(ref, ...constraints) : query(ref)
 
@@ -38,6 +52,7 @@ export function useFirestoreCollection<T extends DocumentData>(
           isFirst.current = false
           setData(docs)
           setLoading(false)
+          if (stopTrace) stopTrace()
         } else {
           if (timerRef.current) clearTimeout(timerRef.current)
           timerRef.current = setTimeout(() => {
@@ -50,6 +65,7 @@ export function useFirestoreCollection<T extends DocumentData>(
         console.error(`Firestore [${collectionPath}] error:`, err)
         setError(err)
         setLoading(false)
+        if (stopTrace) stopTrace()
       }
     )
 
@@ -65,6 +81,14 @@ export function useFirestoreCollection<T extends DocumentData>(
 
 // ─── useFirestoreDocument ──────────────────────────────────────────────────────
 
+/**
+ * Custom hook to fetch a single Firestore document and listen to real-time updates.
+ * @param collectionPath The path to the Firestore collection containing the document.
+ * @param docId The ID of the document to fetch (or null to skip fetching).
+ * @returns An object containing the document data, loading state, and any error encountered.
+ * @example
+ * const { data, loading, error } = useFirestoreDocument('alerts', 'alert-123');
+ */
 export function useFirestoreDocument<T extends DocumentData>(
   collectionPath: string,
   docId: string | null

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useOccupancy } from '../../hooks/useOccupancy'
 import { useGeolocation } from '../../hooks/useGeolocation'
+import { trackGateNavigated } from '../../analytics/events'
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 const STADIUM_CENTER = { lat: 51.5552, lng: -0.2797 }
@@ -16,6 +17,7 @@ export default function GateNavigator() {
   const gate = nearestOpenGate
 
   const getDirections = async () => {
+    trackGateNavigated(gate.name)
     if (!MAPS_API_KEY || !window.google?.maps) {
       setDirections(`Head to ${gate.gateNumber} on the ${gate.name} side. Approx 3-5 min walk from central concourse.`)
       return

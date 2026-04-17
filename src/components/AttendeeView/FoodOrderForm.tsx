@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { collection, addDoc } from 'firebase/firestore'
 import { auth, db } from '../../firebase'
 import type { ConcessionStand, FoodOrder, OrderItem } from '../../types'
+import { trackFoodPreorder } from '../../analytics/events'
 
 interface Props {
   stands: ConcessionStand[]
@@ -63,6 +64,9 @@ export default function FoodOrderForm({ stands, preselectedStand, onBack }: Prop
       const docRef = await addDoc(collection(db, 'orders'), order)
       setOrderId(docRef.id)
       setStep('success')
+      Array.from(cart.values()).forEach(item => {
+        trackFoodPreorder(selectedStand.name, item.name)
+      })
     } catch (err) {
       // Offline or permission error — store locally
       const localId = `local-${Date.now()}`

@@ -4,12 +4,14 @@ import BroadcastPanel from './BroadcastPanel'
 import AIRoutingPanel from './AIRoutingPanel'
 import EventTimeline from './EventTimeline'
 import { useOccupancy } from '../../hooks/useOccupancy'
+import { useRemoteConfig } from '../../hooks/useRemoteConfig'
 
 type Panel = 'occupancy' | 'broadcast' | 'ai-routing' | 'timeline'
 
 export default function StaffDashboard() {
   const [activePanel, setActivePanel] = useState<Panel>('occupancy')
   const { totalAttendance, averageOccupancyPct, sections } = useOccupancy()
+  const { halftimeMode, exitRoutingActive } = useRemoteConfig()
 
   const nav: { id: Panel; label: string; icon: React.ReactNode }[] = [
     {
@@ -138,6 +140,25 @@ export default function StaffDashboard() {
       {/* Main content */}
       <main style={{ flex: 1, overflow: 'auto', padding: 'var(--space-6)' }} role="main" aria-label="Staff dashboard content">
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          {halftimeMode && (
+            <div className="card fade-up" style={{ background: 'var(--color-amber)', color: '#000', border: 'none', marginBottom: 'var(--space-4)', padding: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <span style={{ fontSize: '1.5rem' }}>⏱️</span>
+              <div>
+                <strong style={{ fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Half Time Mode Active</strong>
+                <p style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: 2 }}>Queue algorithms are optimized for mass egress.</p>
+              </div>
+            </div>
+          )}
+          {exitRoutingActive && (
+            <div className="card fade-up" style={{ background: 'var(--color-primary)', color: '#fff', border: 'none', marginBottom: 'var(--space-4)', padding: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <span style={{ fontSize: '1.5rem' }}>🚪</span>
+              <div>
+                <strong style={{ fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Exit Routing Advisory Active</strong>
+                <p style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: 2 }}>Attendees are currently being guided to the nearest exits.</p>
+              </div>
+            </div>
+          )}
+
           {activePanel === 'occupancy' && <OccupancyTable />}
           {activePanel === 'broadcast' && <BroadcastPanel />}
           {activePanel === 'ai-routing' && <AIRoutingPanel />}

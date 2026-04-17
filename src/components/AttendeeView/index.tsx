@@ -7,7 +7,8 @@ import AlertBanner from './AlertBanner'
 import GateNavigator from './GateNavigator'
 import { useFirestoreCollection } from '../../hooks/useFirestore'
 import { SEED_CONCESSIONS } from '../../data/seedData'
-import type { ConcessionStand, StadiumAlert } from '../../types'
+import type { ConcessionStand, StadiumAlert, Concession } from '../../types'
+import { COLLECTIONS } from '../../constants'
 
 type Tab = 'map' | 'queues' | 'order' | 'alerts'
 
@@ -16,12 +17,12 @@ export default function AttendeeView() {
   const [activeTab, setActiveTab] = useState<Tab>('map')
   const [selectedStand, setSelectedStand] = useState<ConcessionStand | null>(null)
 
-  const { data: firestoreConcessions } = useFirestoreCollection<ConcessionStand>('concessions')
-  const { data: alerts } = useFirestoreCollection<StadiumAlert>('alerts')
+  const { data: firestoreConcessions } = useFirestoreCollection<ConcessionStand>(COLLECTIONS.CONCESSIONS)
+  const { data: alerts } = useFirestoreCollection<StadiumAlert>(COLLECTIONS.ALERTS)
 
   const concessions: ConcessionStand[] = useMemo(() => {
     if (firestoreConcessions.length === 0) return SEED_CONCESSIONS
-    return firestoreConcessions.map((fc: any) => {
+    return firestoreConcessions.map((fc: Concession | any) => {
       const seedMatch = SEED_CONCESSIONS.find(seed => seed.name === fc.name)
       return {
         id: fc.id ?? 'unknown',
@@ -208,7 +209,12 @@ export default function AttendeeView() {
                     </div>
                     <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)' }}>{alert.message}</p>
                     <p style={{ fontSize: '0.74rem', color: 'var(--color-text-dim)', marginTop: 'var(--space-2)' }}>
-                      {new Date(alert.createdAt).toLocaleTimeString()}
+                      {new Date(
+                        alert.createdAt || 
+                        (alert as any).timestamp?.toMillis?.() || 
+                        (alert as any).timestamp || 
+                        Date.now()
+                      ).toLocaleTimeString()}
                     </p>
                   </div>
                 ))}

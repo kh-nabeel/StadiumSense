@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useOccupancy } from '../../hooks/useOccupancy'
 import { calcOccupancyPct, getDensityColor } from '../../data/seedData'
+import { trackMapViewed } from '../../analytics/events'
+import { traceMapRender } from '../../performance/traces'
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
 
@@ -33,10 +35,12 @@ export default function MapOverlay() {
 
   // Load Google Maps
   useEffect(() => {
-    if (!MAPS_API_KEY) { setMapsError(true); return }
+    trackMapViewed()
+    const stopTrace = traceMapRender()
+    if (!MAPS_API_KEY) { setMapsError(true); stopTrace(); return }
     loadGoogleMaps()
-      .then(() => setMapsLoaded(true))
-      .catch(() => setMapsError(true))
+      .then(() => { setMapsLoaded(true); stopTrace() })
+      .catch(() => { setMapsError(true); stopTrace() })
   }, [])
 
   // Initialize map

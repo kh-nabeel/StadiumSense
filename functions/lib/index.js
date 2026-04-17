@@ -33,74 +33,88 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCrowdRoutingSuggestion = void 0;
-const functions = __importStar(require("firebase-functions/v1"));
+exports.simulateLiveOccupancy = exports.broadcastAlert = exports.getCrowdRoutingSuggestion = void 0;
+const https_1 = require("firebase-functions/v2/https");
+const scheduler_1 = require("firebase-functions/v2/scheduler");
+const admin = __importStar(require("firebase-admin"));
 const generative_ai_1 = require("@google/generative-ai");
-// ─── Cloud Function ───────────────────────────────────────────────────────────
-exports.getCrowdRoutingSuggestion = functions
-    .runWith({ timeoutSeconds: 30, memory: '256MB' })
-    .https.onCall(async (data, context) => {
-    // Optional: require auth
-    // if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in')
-    var _a, _b;
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new functions.https.HttpsError('failed-precondition', 'GEMINI_API_KEY environment variable not set');
-    }
-    const { sections } = data;
-    if (!sections || typeof sections !== 'object') {
-        throw new functions.https.HttpsError('invalid-argument', 'sections must be an object mapping section names to occupancy percentages');
-    }
-    // Validate values
-    for (const [name, pct] of Object.entries(sections)) {
-        if (typeof pct !== 'number' || pct < 0 || pct > 100) {
-            throw new functions.https.HttpsError('invalid-argument', `Invalid occupancy percentage for "${name}": must be 0-100`);
-        }
-    }
-    const genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const prompt = `You are a crowd-safety AI for a large stadium. Based on the following section occupancy percentages, suggest optimal gate redirections to balance crowd flow and prevent dangerous congestion.
-
-Current occupancy data:
-${Object.entries(sections).map(([name, pct]) => `- ${name}: ${pct}%`).join('\n')}
-
-Rules:
-- Only include sections with occupancy ≥ 75% in suggestions
-- Suggest redirect to sections with occupancy ≤ 60%
-- Urgency is "high" if ≥ 90%, "medium" if 75-89%, "low" otherwise
-- Be specific about which gate and why
-
-Respond ONLY with valid JSON (no markdown blocks) using this exact schema:
-{
-  "suggestions": [
-    {
-      "fromSection": "section name",
-      "toGate": "Gate X (Section Name — XX% full)",
-      "reason": "actionable reason in 1-2 sentences",
-      "urgency": "low|medium|high"
-    }
-  ],
-  "summary": "2-3 sentence executive summary for stadium operations staff"
-}`;
+admin.initializeApp();
+const db = admin.firestore();
+const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+exports.getCrowdRoutingSuggestion = (0, https_1.onCall)(async (request) => {
     try {
+        const { sections } = request.data;
+        if (!sections || !Array.isArray(sections)) {
+            throw new https_1.HttpsError("invalid-argument", "Missing sections array in request.");
+        }
+        const payloadString = sections.map((s) => `Section: ${s.name || 'Unknown'}, Occupancy: ${s.occupancyPct || 0}%`).join("\n");
+        const prompt = `Based on the following occupancy at JN Stadium Kochi for a Kerala Blasters ISL match:
+${payloadString}
+
+Suggest crowd routing strategies or gate redirections to avoid critical crowding. Keep it highly specific, actionable and below 3 sentences. If the occupancy is completely safe, just say that everything looks good.`;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
-        // Strip any accidental markdown fences
-        const cleaned = responseText
-            .replace(/```json?\n?/g, '')
-            .replace(/```\n?/g, '')
-            .trim();
-        const parsed = JSON.parse(cleaned);
-        const response = {
-            suggestions: (_a = parsed.suggestions) !== null && _a !== void 0 ? _a : [],
-            summary: (_b = parsed.summary) !== null && _b !== void 0 ? _b : 'No summary provided.',
-            generatedAt: Date.now(),
+        const suggestion = result.response.text();
+        return { suggestion, success: true };
+    }
+    catch (error) {
+        console.error("getCrowdRoutingSuggestion error:", error);
+        return {
+            suggestion: "AI Analysis currently unavailable. Please direct stewards manually based on visual crowd density.",
+            success: false
         };
-        return response;
     }
-    catch (err) {
-        console.error('Gemini error:', err);
-        throw new functions.https.HttpsError('internal', 'Failed to generate crowd routing suggestions. Please try again.');
+});
+exports.broadcastAlert = (0, https_1.onCall)(async (request) => {
+    try {
+        const { message, zone, type } = request.data;
+        if (!message || !zone || !type) {
+            throw new https_1.HttpsError("invalid-argument", "Missing required fields: message, zone, type");
+        }
+        const alertDoc = {
+            message,
+            zone,
+            type,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        await db.collection("alerts").add(alertDoc);
+        return { success: true };
     }
+    catch (error) {
+        console.error("broadcastAlert error:", error);
+        throw new https_1.HttpsError("internal", error.message);
+    }
+});
+exports.simulateLiveOccupancy = (0, scheduler_1.onSchedule)("every 5 minutes", async (event) => {
+    const snapshot = await db.collection("sections").get();
+    if (snapshot.empty) {
+        console.log("No sections found.");
+        return;
+    }
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const capacity = data.capacity || 1000;
+        const current = data.currentOccupancy || 0;
+        let fluctuation = Math.floor(Math.random() * 81) - 40;
+        let newOccupancy = current + fluctuation;
+        if (newOccupancy < 0)
+            newOccupancy = 0;
+        if (newOccupancy > capacity)
+            newOccupancy = capacity;
+        const occupancyPct = Math.round((newOccupancy / capacity) * 100);
+        let status = "clear";
+        if (occupancyPct >= 85)
+            status = "critical";
+        else if (occupancyPct >= 65)
+            status = "busy";
+        batch.update(doc.ref, {
+            currentOccupancy: newOccupancy,
+            occupancyPct,
+            status
+        });
+    });
+    await batch.commit();
+    console.log(`Updated ${snapshot.size} sections with simulated live occupancy.`);
 });
 //# sourceMappingURL=index.js.map

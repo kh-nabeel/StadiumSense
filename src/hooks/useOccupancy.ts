@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useFirestoreCollection } from './useFirestore'
 import { SEED_SECTIONS, calcOccupancyPct, getDensityColor, getDensityLabel } from '../data/seedData'
-import type { VenueSection } from '../types'
+import type { VenueSection, Section } from '../types'
 
 export interface EnrichedSection extends VenueSection {
   occupancyPct: number
@@ -9,6 +9,13 @@ export interface EnrichedSection extends VenueSection {
   densityLabel: 'low' | 'medium' | 'high' | 'critical'
 }
 
+/**
+ * Custom hook to retrieve and process sections occupancy data from Firestore.
+ * Fallbacks to seed data and calculates additional metrics such as percentage and density color.
+ * @returns An object containing sections data, loading state, error, nearest open gate, total attendance, and average occupancy percentage.
+ * @example
+ * const { sections, nearestOpenGate, totalAttendance } = useOccupancy();
+ */
 export function useOccupancy() {
   const { data: firestoreSections, loading, error } = useFirestoreCollection<VenueSection>('sections')
 
@@ -16,11 +23,11 @@ export function useOccupancy() {
   const rawSections: VenueSection[] = firestoreSections.length > 0 ? firestoreSections : SEED_SECTIONS
 
   const sections: EnrichedSection[] = useMemo(() =>
-    rawSections.map((s: any) => {
+    rawSections.map((s: Section | any) => {
       const currentOcc = s.currentOccupancy ?? s.current ?? 0
       const cap = s.capacity ?? 1
       const pct = Math.round((currentOcc / cap) * 100)
-      const seedMatch = SEED_SECTIONS.find(seed => seed.id === s.id)
+      const seedMatch = SEED_SECTIONS.find((seed: VenueSection) => seed.id === s.id)
       
       return {
         ...s,

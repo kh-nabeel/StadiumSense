@@ -104,3 +104,66 @@ export interface CrowdRoutingResponse {
   summary: string
   generatedAt: number
 }
+
+// ─── NEW INTERFACES REQUESTED ──────────────────────────────────────────────────
+
+export interface Section {
+  id: string;
+  name: string;
+  gate: string;
+  capacity: number;
+  current: number;
+  occupancyPct: number;
+  waitMin: number;
+  status: 'critical' | 'busy' | 'clear' | 'normal';
+  zone: string;
+  level: string;
+}
+
+export interface Concession {
+  id: string;
+  name: string;
+  location: string;
+  items: string[];
+  waitMin: number;
+  queueLength: number;
+  priceRange: string;
+  isOpen: boolean;
+  acceptsUPI: boolean;
+  preOrderEnabled: boolean;
+}
+
+export interface Alert {
+  id: string;
+  type: string;
+  zone: string;
+  active: boolean;
+  message: string;
+  timestamp: number;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  zone: string;
+  gate: string;
+  phone: string;
+}
+
+export interface MatchEvent {
+  id: string;
+  label: string;
+  time: number;
+  status: 'done' | 'active' | 'upcoming';
+  description: string;
+}
+
+export interface RemoteConfigValues {
+  halftimeMode: boolean;
+  venueName: string;
+  matchTitle: string;
+  maxQueueThreshold: number;
+  exitRoutingActive: boolean;
+  loading: boolean;
+}

@@ -233,6 +233,22 @@ input, textarea, select { font-family: inherit; }
   outline: none;
   width: 100%;
 }
+
+/* Accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+}
+.skip-link:focus {
+  top: 0;
+  z-index: 9999;
+}
+:focus-visible {
+  outline: 3px solid #FFB800;
+  outline-offset: 2px;
+}
+
 .form-input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-glow);

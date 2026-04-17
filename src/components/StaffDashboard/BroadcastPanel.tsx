@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { collection, addDoc } from 'firebase/firestore'
 import { auth, db } from '../../firebase'
+import { COLLECTIONS } from '../../constants'
 import { useOccupancy } from '../../hooks/useOccupancy'
 import type { StadiumAlert, AlertSeverity } from '../../types'
 
@@ -34,7 +35,7 @@ export default function BroadcastPanel() {
     }
 
     try {
-      await addDoc(collection(db, 'alerts'), alert)
+      await addDoc(collection(db, COLLECTIONS.ALERTS), alert)
       setSent(true)
       setTitle('')
       setMessage('')

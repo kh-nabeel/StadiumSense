@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useOccupancy } from '../../hooks/useOccupancy'
 import type { CrowdRoutingResponse, RoutingSuggestion } from '../../types'
+import { traceGeminiCall } from '../../performance/traces'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string | undefined
 
@@ -21,7 +22,7 @@ Respond with a JSON object (no markdown) with this exact schema:
 Only include sections that need action (over 75% occupancy). Be specific and actionable.`
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -86,12 +87,16 @@ export default function AIRoutingPanel() {
     setResult(null)
     try {
       if (GEMINI_API_KEY) {
+        const stopGemini = traceGeminiCall()
         const data = await callGeminiDirect(occupancyData)
+        stopGemini()
         setResult(data)
       } else {
         // Simulate latency for UX demo
+        const stopGemini = traceGeminiCall()
         await new Promise(r => setTimeout(r, 1800))
         setResult(getMockSuggestions(occupancyData))
+        stopGemini()
       }
     } catch (err) {
       console.error('AI routing error:', err)
