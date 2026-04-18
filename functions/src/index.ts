@@ -45,8 +45,24 @@ export const broadcastAlert = onCall(async (request) => {
       throw new HttpsError("invalid-argument", "Missing required fields: message, zone, type");
     }
 
+    const prompt = `Translate the following stadium alert message into Spanish, Hindi, and Malayalam. Format the response as a valid JSON object strictly with the keys "es", "hi", and "ml" containing the translated string in values. ONLY output the JSON object without any other text or markdown block. Message: "${message}"`;
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    
+    let translations = {};
+    try {
+      let text = result.response.text().trim();
+      if (text.startsWith("```json")) {
+        text = text.substring(7, text.length - 3).trim();
+      }
+      translations = JSON.parse(text);
+    } catch (e: any) {
+      console.error("Translation parsing failed:", e);
+    }
+
     const alertDoc = {
       message,
+      translations,
       zone,
       type,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -61,7 +77,7 @@ export const broadcastAlert = onCall(async (request) => {
   }
 });
 
-export const simulateLiveOccupancy = onSchedule("every 5 minutes", async (event) => {
+export const simulateLiveOccupancy = onSchedule("every 5 minutes", async (_event) => {
   const snapshot = await db.collection("sections").get();
   
   if (snapshot.empty) {
@@ -76,7 +92,7 @@ export const simulateLiveOccupancy = onSchedule("every 5 minutes", async (event)
     const capacity = data.capacity || 1000;
     const current = data.currentOccupancy || 0;
 
-    let fluctuation = Math.floor(Math.random() * 81) - 40;
+    const fluctuation = Math.floor(Math.random() * 81) - 40;
     let newOccupancy = current + fluctuation;
 
     if (newOccupancy < 0) newOccupancy = 0;
